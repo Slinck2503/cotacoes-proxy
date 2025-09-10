@@ -1,0 +1,10 @@
+{
+  "name": "cotacoes-proxy",
+  "version": "1.0.0",
+  "main": "api/cotacoes.js",
+  "type": "module",
+  "scripts": {
+    "start": "node api/cotacoes.js"
+  },
+  "dependencies": {}
+}
