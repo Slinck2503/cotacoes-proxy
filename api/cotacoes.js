@@ -1,32 +1,33 @@
 import fetch from 'node-fetch';
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 
 export default async function handler(req, res) {
   try {
-    const url = 'http://ctrcambio.com.br/tvcaxias/';
-    const response = await fetch(url);
+    // Faz o fetch da página
+    const response = await fetch('http://ctrcambio.com.br/tvcaxias/');
     const html = await response.text();
 
-    const $ = cheerio.load(html);
+    // Carrega o HTML no Cheerio
+    const $ = load(html);
 
-    // Objeto final que vamos retornar
     const cotacoes = {};
 
-    // Seleciona as linhas que contêm as moedas
-    $('table tr').each((i, elem) => {
-      const tds = $(elem).find('td').map((i, el) => $(el).text().trim()).get();
-
-      if (tds.length === 3) {
-        const moeda = tds[0];
-        const compra = tds[1].replace(/\s/g, '');
-        const venda = tds[2].replace(/\s/g, '');
-        cotacoes[moeda] = { compra, venda };
+    // Seleciona cada linha da tabela de cotações
+    $('table tbody tr').each((i, el) => {
+      const tds = $(el).find('td');
+      if (tds.length >= 3) {
+        const moeda = $(tds[0]).text().trim();
+        const compra = $(tds[1]).text().trim();
+        const venda = $(tds[2]).text().trim();
+        if (moeda) {
+          cotacoes[moeda] = { compra, venda };
+        }
       }
     });
 
     res.status(200).json({ success: true, cotacoes });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    console.error('Erro ao buscar cotações:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar cotações' });
   }
 }
