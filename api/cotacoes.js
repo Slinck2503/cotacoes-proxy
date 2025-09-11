@@ -1,30 +1,38 @@
 import fetch from 'node-fetch';
+import cheerio from 'cheerio';
 
 export default async function handler(req, res) {
   try {
-    const url = 'https://ctrcambio.com.br/tvcaxias'; // URL do site de cotações
-    const response = await fetch(url);
-    const text = await response.text();
+    // Buscar o HTML da página de cotações
+    const response = await fetch('http://ctrcambio.com.br/tvcaxias/');
+    const html = await response.text();
 
-    console.log('Conteúdo recebido do site:', text.slice(0, 500)); // só os 500 primeiros caracteres para não lotar o log
+    // Carregar HTML no Cheerio
+    const $ = cheerio.load(html);
 
-    // Aqui você precisa fazer parsing do texto recebido para extrair as cotações
-    // Exemplo simples, adaptável:
+    // Objeto para armazenar cotações
     const cotacoes = {};
 
-    // Supondo que o site tenha o HTML como tabela, você poderia usar regex simples
-    const regex = /<tr>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/g;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      const moeda = match[1].trim();
-      const compra = parseFloat(match[2].replace(',', '.'));
-      const venda = parseFloat(match[3].replace(',', '.'));
-      cotacoes[moeda] = { compra, venda };
-    }
+    // Exemplo: pegar todas as linhas da tabela de moedas
+    $('table tr').each((i, row) => {
+      const cols = $(row).find('td');
+      if (cols.length >= 3) {
+        const moeda = $(cols[0]).text().trim();
+        const compra = $(cols[1]).text().trim();
+        const venda = $(cols[2]).text().trim();
 
-    res.status(200).json({ success: true, cotacoes });
-  } catch (err) {
-    console.error('Erro ao buscar cotações:', err);
-    res.status(500).json({ success: false, error: err.message });
+        if (moeda) {
+          cotacoes[moeda] = {
+            compra: parseFloat(compra.replace(',', '.')),
+            venda: parseFloat(venda.replace(',', '.'))
+          };
+        }
+      }
+    });
+
+    return res.status(200).json({ success: true, cotacoes });
+  } catch (error) {
+    console.error('Erro ao buscar cotações:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
