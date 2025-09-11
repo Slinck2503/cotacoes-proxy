@@ -6,16 +6,23 @@ export default async function handler(req, res) {
     const response = await fetch("http://ctrcambio.com.br/tvcaxias/");
     const html = await response.text();
 
-    // Carregar o HTML com cheerio
+    // DEBUG: imprimir parte do HTML recebido
+    console.log("Trecho do HTML recebido:", html.substring(0, 1000));
+
     const $ = cheerio.load(html);
 
-    // Objeto para armazenar as cotações
     const cotacoes = {};
 
-    // Exemplo: supondo que a tabela tenha linhas <tr> com moeda e valor
+    // DEBUG: listar todos os <tr> encontrados
+    $("tr").each((i, el) => {
+      console.log("Linha encontrada:", $(el).text().trim());
+    });
+
+    // TENTATIVA: pegar tabela
     $("table tr").each((i, el) => {
-      const moeda = $(el).find("td").eq(0).text().trim();
-      const valor = $(el).find("td").eq(1).text().trim();
+      const tds = $(el).find("td");
+      const moeda = tds.eq(0).text().trim();
+      const valor = tds.eq(1).text().trim();
 
       if (moeda && valor) {
         cotacoes[moeda] = valor;
