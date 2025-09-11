@@ -1,40 +1,30 @@
-// api/cotacoes.js
-import fetch from "node-fetch";
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  const fonteURL = 'https://ctrcambio.com.br/tvcaxias';
-
   try {
-    // fetch via AllOrigins para contornar CORS
-    const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(fonteURL)}`;
-    const response = await fetch(proxyURL);
-    if (!response.ok) throw new Error(`Erro no proxy: ${response.status}`);
+    const url = 'https://ctrcambio.com.br/tvcaxias'; // URL do site de cotações
+    const response = await fetch(url);
+    const text = await response.text();
 
-    const data = await response.json();
-    const html = data.contents;
+    console.log('Conteúdo recebido do site:', text.slice(0, 500)); // só os 500 primeiros caracteres para não lotar o log
 
-    // parse HTML para extrair tabela
+    // Aqui você precisa fazer parsing do texto recebido para extrair as cotações
+    // Exemplo simples, adaptável:
     const cotacoes = {};
-    const regexLinha = /<tr>(.*?)<\/tr>/g;
-    let matchLinha;
 
-    while ((matchLinha = regexLinha.exec(html)) !== null) {
-      const linha = matchLinha[1];
-      const celulas = linha.match(/<td.*?>(.*?)<\/td>/g);
-      if (!celulas || celulas.length < 4) continue;
-
-      const moeda = celulas[1].replace(/<.*?>/g, '').trim();
-      const compra = parseFloat(celulas[2].replace(/R\$|\.|,/g, '').replace(/(\d+)$/,'$1')) / 100;
-      const venda = parseFloat(celulas[3].replace(/R\$|\.|,/g, '').replace(/(\d+)$/,'$1')) / 100;
-
-      if (moeda && !isNaN(compra) && !isNaN(venda)) {
-        cotacoes[moeda] = { compra, venda };
-      }
+    // Supondo que o site tenha o HTML como tabela, você poderia usar regex simples
+    const regex = /<tr>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const moeda = match[1].trim();
+      const compra = parseFloat(match[2].replace(',', '.'));
+      const venda = parseFloat(match[3].replace(',', '.'));
+      cotacoes[moeda] = { compra, venda };
     }
 
     res.status(200).json({ success: true, cotacoes });
   } catch (err) {
-    console.error(err);
+    console.error('Erro ao buscar cotações:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 }
